@@ -45,6 +45,6 @@ import { WebsocketModule } from './websocket/websocket.module';
     UsersModule, 
     WebsocketModule, ],
   controllers: [AppController],
-  providers: [AppService, Logger],
+  providers: [AppService],
 })
 export class AppModule {}
