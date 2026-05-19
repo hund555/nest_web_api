@@ -22,14 +22,20 @@
   "dependencies": {
     "-": "^0.0.1",
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-ws": "^11.1.21",
+    "@nestjs/typeorm": "^11.0.1",
     "@nestjs/websockets": "^11.1.21",
     "@types/ws": "^8.18.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "mssql": "^12.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "save-dev": "^0.0.1-security",
+    "typeorm": "^0.3.30",
     "ws": "^8.20.1"
   },
   "devDependencies": {
