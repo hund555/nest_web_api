@@ -9,12 +9,13 @@ import { ResidentsModule } from './residents/residents.module';
 import { UsersModule } from './users/users.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Tracker } from './Entities/tracker.entity';
-import { GpsLocation } from './Entities/gps.entity';
-import { Resident } from './Entities/resident.entity';
-import { AlarmLog } from './Entities/alarm.entity';
-import { User } from './Entities/user.entity';
-import { Role } from './Entities/role.entity';
+import { Tracker } from './entities/tracker.entity';
+import { GpsLocation } from './entities/gps.entity';
+import { Resident } from './entities/resident.entity';
+import { AlarmLog } from './entities/alarm.entity';
+import { User } from './entities/user.entity';
+import { Role } from './entities/role.entity';
+import { WebsocketModule } from './websocket/websocket.module';
 
 @Module({
   imports: [
@@ -24,10 +25,10 @@ import { Role } from './Entities/role.entity';
       useFactory: (config: ConfigService) => ({
         type: 'mssql',
         host: config.get<string>('DB_HOST'),
-        port: config.get<number>('DB_PORT'),
+        port: parseInt(config.get<number>('DB_PORT')?.toString() || '1433'),
         username: config.get<string>('DB_USERNAME'),
         password: config.get<string>('DB_PASSWORD'),
-        database: config.get<string>('DB_NAME'),
+        database: config.get<string>('DB_DATABASE'),
         entities: [Tracker, GpsLocation, Resident, AlarmLog, User, Role],
         synchronize: true,
         options: {
@@ -41,8 +42,9 @@ import { Role } from './Entities/role.entity';
     AlarmModule, 
     TrackersModule, 
     ResidentsModule, 
-    UsersModule, ],
+    UsersModule, 
+    WebsocketModule, ],
   controllers: [AppController],
-  providers: [AppService, WebsocketGateway, Logger],
+  providers: [AppService, Logger],
 })
 export class AppModule {}
