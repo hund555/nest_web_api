@@ -5,19 +5,19 @@ import { User } from './user.entity';
 @Entity('Alarm_logs')
 export class AlarmLog {
   @PrimaryGeneratedColumn()
-  ID!: number;
+  ID: number;
 
   @ManyToOne(() => Resident, resident => resident.alarmLogs)
   @JoinColumn({ name: 'Resident_ID' })
-  resident!: Resident;
+  resident: Resident;
 
   @CreateDateColumn()
-  Timestamp!: Date;
+  Timestamp: Date;
 
   @Column({ nullable: true })
-  Description!: string;
+  Description: string;
 
   @ManyToOne(() => User, user => user.alarmLogs)
   @JoinColumn({ name: 'User_ID' })
-  respondedBy!: User;
+  respondedBy: User;
 }

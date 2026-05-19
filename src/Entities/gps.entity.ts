@@ -4,18 +4,18 @@ import { Tracker } from './tracker.entity';
 @Entity('GPS_Locations')
 export class GpsLocation {
   @PrimaryGeneratedColumn()
-  ID!: number;
+  ID: number;
 
   @ManyToOne(() => Tracker, tracker => tracker.gpsLocations)
   @JoinColumn({ name: 'Tracker_ID' })
-  tracker!: Tracker;
+  tracker: Tracker;
 
   @Column('float')
-  lng!: number;
+  lng: number;
 
   @Column('float')
-  lat!: number;
+  lat: number;
 
   @CreateDateColumn()
-  Timestamp!: Date;
+  Timestamp: Date;
 }

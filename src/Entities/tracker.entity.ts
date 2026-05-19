@@ -5,23 +5,23 @@ import { Resident } from './resident.entity';
 @Entity('Trackers')
 export class Tracker {
   @PrimaryGeneratedColumn()
-  Tracker_ID!: number;
+  Tracker_ID: number;
 
   @Column()
-  IP!: string;
+  IP: string;
 
   @Column()
-  Port!: number;
+  Port: number;
 
   @Column({ default: false })
-  IsOnline!: boolean;
+  IsOnline: boolean;
 
   @Column('float', { nullable: true })
-  Battery!: number;
+  Battery: number;
 
   @OneToMany(() => GpsLocation, gps => gps.tracker)
-  gpsLocations!: GpsLocation[];
+  gpsLocations: GpsLocation[];
 
   @OneToOne(() => Resident, resident => resident.tracker)
-  resident!: Resident;
+  resident: Resident;
 }

@@ -9,7 +9,12 @@ import { ResidentsModule } from './residents/residents.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [GpsModule, AlarmModule, TrackersModule, ResidentsModule, UsersModule],
+  imports: [
+    GpsModule, 
+    AlarmModule, 
+    TrackersModule, 
+    ResidentsModule, 
+    UsersModule, ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway, Logger],
 })

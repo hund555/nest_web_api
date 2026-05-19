@@ -5,24 +5,24 @@ import { AlarmLog } from './alarm.entity';
 @Entity('Residents')
 export class Resident {
   @PrimaryGeneratedColumn()
-  Resident_ID!: number;
+  Resident_ID: number;
 
   @Column()
-  Name!: string;
+  Name: string;
 
   @Column({ nullable: true })
-  Address!: string;
+  Address: string;
 
   @Column({ nullable: true })
-  EmergencyContact!: string;
+  EmergencyContact: string;
 
   @Column({ nullable: true })
-  HealthStatus!: string;
+  HealthStatus: string;
 
   @OneToOne(() => Tracker)
   @JoinColumn({ name: 'Tracker_ID' })
-  tracker!: Tracker;
+  tracker: Tracker;
 
   @OneToMany(() => AlarmLog, alarm => alarm.resident)
-  alarmLogs!: AlarmLog[];
+  alarmLogs: AlarmLog[];
 }

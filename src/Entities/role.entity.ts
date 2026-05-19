@@ -4,11 +4,11 @@ import { User } from './user.entity';
 @Entity('Roles')
 export class Role {
   @PrimaryGeneratedColumn()
-  Role_ID!: number;
+  Role_ID: number;
 
   @Column()
-  Role!: string;
+  Role: string;
 
   @OneToMany(() => User, user => user.role)
-  users!: User[];
+  users: User[];
 }

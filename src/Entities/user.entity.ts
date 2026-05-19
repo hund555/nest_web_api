@@ -5,24 +5,24 @@ import { AlarmLog } from './alarm.entity';
 @Entity('Users')
 export class User {
   @PrimaryGeneratedColumn()
-  User_ID!: number;
+  User_ID: number;
 
   @Column()
-  Email!: string;
+  Email: string;
 
   @Column()
-  Name!: string;
+  Name: string;
 
   @Column()
-  Password!: string;
+  Password: string;
 
   @Column({ nullable: true })
-  Hash!: string;
+  Hash: string;
 
   @ManyToOne(() => Role, role => role.users)
   @JoinColumn({ name: 'Role_ID' })
-  role!: Role;
+  role: Role;
 
   @OneToMany(() => AlarmLog, alarm => alarm.respondedBy)
-  alarmLogs!: AlarmLog[];
+  alarmLogs: AlarmLog[];
 }
