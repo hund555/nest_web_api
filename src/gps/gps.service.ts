@@ -30,6 +30,11 @@ export class GpsService {
     return this.gpsRepository.save(location);
   }
 
+  /**
+   * Retrieves the latest GPS location for a given tracker ID.
+   * @param trackerId 
+   * @returns 
+   */
   async getLatestByTracker(trackerId: number): Promise<GpsLocation | null> {
     return this.gpsRepository.findOne({
       where: { tracker: { Tracker_ID: trackerId } },
