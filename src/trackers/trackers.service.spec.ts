@@ -37,7 +37,7 @@ describe('TrackersService', () => {
 
   describe('create', () => {
     it('should create and save a tracker', async () => {
-      const dto = { IP: '192.168.1.1', Port: 5000 };
+      const dto = { IP: '192.168.1.1', Port: 8000 };
       const created = { Tracker_ID: 1, ...dto, IsOnline: false, Battery: null };
 
       mockTrackerRepository.create.mockReturnValue(created);
@@ -57,8 +57,8 @@ describe('TrackersService', () => {
   describe('findAll', () => {
     it('should return all trackers', async () => {
       const trackers = [
-        { Tracker_ID: 1, IP: '192.168.1.1', Port: 5000, IsOnline: true, Battery: 80 },
-        { Tracker_ID: 2, IP: '192.168.1.2', Port: 5001, IsOnline: false, Battery: 50 },
+        { Tracker_ID: 1, IP: '192.168.1.1', Port: 8000, IsOnline: true, Battery: 80 },
+        { Tracker_ID: 2, IP: '192.168.1.2', Port: 8000, IsOnline: false, Battery: 50 },
       ];
       mockTrackerRepository.find.mockResolvedValue(trackers);
 
@@ -79,7 +79,7 @@ describe('TrackersService', () => {
 
   describe('findOne', () => {
     it('should return a tracker by id', async () => {
-      const tracker = { Tracker_ID: 1, IP: '192.168.1.1', Port: 5000, IsOnline: true, Battery: 80 };
+      const tracker = { Tracker_ID: 1, IP: '192.168.1.1', Port: 8000, IsOnline: true, Battery: 80 };
       mockTrackerRepository.findOne.mockResolvedValue(tracker);
 
       const result = await service.findOne(1);
@@ -102,7 +102,7 @@ describe('TrackersService', () => {
   describe('update', () => {
     it('should update and return the tracker', async () => {
       const dto = { IsOnline: true, Battery: 75 };
-      const updated = { Tracker_ID: 1, IP: '192.168.1.1', Port: 5000, ...dto };
+      const updated = { Tracker_ID: 1, IP: '192.168.1.1', Port: 8000, ...dto };
 
       mockTrackerRepository.update.mockResolvedValue({ affected: 1 });
       mockTrackerRepository.findOne.mockResolvedValue(updated);
@@ -116,7 +116,7 @@ describe('TrackersService', () => {
 
   describe('setOnlineStatus', () => {
     it('should set tracker online status to true', async () => {
-      const updated = { Tracker_ID: 1, IP: '192.168.1.1', Port: 5000, IsOnline: true, Battery: 80 };
+      const updated = { Tracker_ID: 1, IP: '192.168.1.1', Port: 8000, IsOnline: true, Battery: 80 };
 
       mockTrackerRepository.update.mockResolvedValue({ affected: 1 });
       mockTrackerRepository.findOne.mockResolvedValue(updated);
@@ -128,7 +128,7 @@ describe('TrackersService', () => {
     });
 
     it('should set tracker online status to false', async () => {
-      const updated = { Tracker_ID: 1, IP: '192.168.1.1', Port: 5000, IsOnline: false, Battery: 80 };
+      const updated = { Tracker_ID: 1, IP: '192.168.1.1', Port: 8000, IsOnline: false, Battery: 80 };
 
       mockTrackerRepository.update.mockResolvedValue({ affected: 1 });
       mockTrackerRepository.findOne.mockResolvedValue(updated);
@@ -142,7 +142,7 @@ describe('TrackersService', () => {
 
   describe('updateBattery', () => {
     it('should update battery level', async () => {
-      const updated = { Tracker_ID: 1, IP: '192.168.1.1', Port: 5000, IsOnline: true, Battery: 42 };
+      const updated = { Tracker_ID: 1, IP: '192.168.1.1', Port: 8000, IsOnline: true, Battery: 42 };
 
       mockTrackerRepository.update.mockResolvedValue({ affected: 1 });
       mockTrackerRepository.findOne.mockResolvedValue(updated);
