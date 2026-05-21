@@ -1,21 +1,26 @@
+import websocket
+import json
 import serial
 import pynmea2
-import requests
 import time
 
-# backend API URL
-API_URL = "http://YOUR_PC_IP:3000/gps"
+WS_URL = "ws://YOUR_PC_IP:5000"
 
-# GPS serial port
-PORT = "/dev/serial0"
-
-# Tracker ID from database
 TRACKER_ID = 1
 
-# Open GPS serial
-ser = serial.Serial(PORT, baudrate=115200, timeout=1)
+PORT = "/dev/serial0"
 
-print("Tracker started...")
+ser = serial.Serial(
+    PORT,
+    baudrate=115200,
+    timeout=1
+)
+
+ws = websocket.WebSocket()
+
+ws.connect(WS_URL)
+
+print("Connected to websocket")
 
 while True:
 
@@ -26,35 +31,31 @@ while True:
             errors='ignore'
         ).strip()
 
-        # Parse only GPS GGA lines
-        if line.startswith("$GNGGA"):
+        if "GGA" in line:
 
             msg = pynmea2.parse(line)
 
             data = {
-                "Tracker_ID": TRACKER_ID,
-                "lat": msg.latitude,
-                "lng": msg.longitude
+                "event": "gps",
+                "data": {
+                    "trackerId": TRACKER_ID,
+                    "lat": msg.latitude,
+                    "lng": msg.longitude
+                }
             }
 
-            print("Sending:", data)
+            ws.send(json.dumps({"event": "gps", "data": data}))
 
-            response = requests.post(
-                API_URL,
-                json=data
-            )
+            print("GPS sent:", data)
 
-            print(
-                "Server response:",
-                response.status_code
-            )
-
-            # Send every 5 sec
             time.sleep(5)
 
     except KeyboardInterrupt:
 
-        print("Stopped.")
+        ws.close()
+
+        print("Stopped")
+
         break
 
     except Exception as e:
