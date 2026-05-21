@@ -24,4 +24,8 @@ export class Tracker {
 
   @OneToOne(() => Resident, resident => resident.tracker)
   resident: Resident;
+
+  @Column({ nullable: true })
+  LastSeen: Date;
+
 }

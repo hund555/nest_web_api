@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GpsLocation } from '../entities/gps.entity';
+import { Tracker } from '../entities/tracker.entity';
 
 export class GpsLocationDto {
   Tracker_ID: number;
@@ -14,19 +15,45 @@ export class GpsService {
   constructor(
     @InjectRepository(GpsLocation)
     private readonly gpsRepository: Repository<GpsLocation>,
-  ) {}
+    @InjectRepository(Tracker)
+    private readonly trackerRepository: Repository<Tracker>,
+  ) { }
 
   /**
-   * Saves a new GPS location.
-   * @param dto 
-   * @returns 
+   * Persists a new GPS location for the specified tracker.
+   *
+   * Finds the tracker by DTO. If the tracker exists, marks it online,
+   * updates its last seen timestamp, and saves the incoming latitude/longitude.
+   *
+   * @param dto GPS payload containing tracker ID, latitude and longitude
+   * @returns the saved GpsLocation entity
    */
   async saveLocation(dto: GpsLocationDto): Promise<GpsLocation> {
+
+    // Find tracker
+    const tracker = await this.trackerRepository.findOne({
+      where: {
+        Tracker_ID: dto.Tracker_ID
+      }
+    });
+
+    if (!tracker) {
+      throw new Error('Tracker not found');
+    }
+
+    // Tracker is online because GPS data arrived
+    tracker.IsOnline = true;
+    tracker.LastSeen = new Date();
+
+    await this.trackerRepository.save(tracker);
+
+    // Save GPS location
     const location = this.gpsRepository.create({
-      tracker: { Tracker_ID: dto.Tracker_ID },
+      tracker,
       lat: dto.lat,
       lng: dto.lng,
     });
+
     return this.gpsRepository.save(location);
   }
 
