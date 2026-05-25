@@ -90,4 +90,17 @@ export class TrackersService {
   {
     await this.trackerRepository.delete(trackerId);
   }
+
+  /**
+   * Finds all unassigned trackers.
+   * @returns A promise resolving to an array of unassigned Tracker entities.
+   */
+  async findUnassigned(): Promise<Tracker[]> 
+  {
+    return this.trackerRepository
+    .createQueryBuilder('tracker')
+    .leftJoin('tracker.resident', 'resident')
+    .where('resident.Resident_ID IS NULL')
+    .getMany();
+  }
 }

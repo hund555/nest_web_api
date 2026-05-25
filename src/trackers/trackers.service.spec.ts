@@ -10,6 +10,7 @@ const mockTrackerRepository = {
   findOne: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
+  createQueryBuilder: jest.fn(),
 };
 
 describe('TrackersService', () => {
@@ -161,6 +162,31 @@ describe('TrackersService', () => {
       await service.remove(1);
 
       expect(mockTrackerRepository.delete).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('findUnassigned', () => {
+    it('should return all trackers without a resident', async () => {
+      const trackers = [
+        { Tracker_ID: 2, IP: '192.168.1.2', IsOnline: false, Battery: 50 },
+      ];
+
+      const mockQueryBuilder = 
+      {
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(trackers),
+      };
+
+      mockTrackerRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.findUnassigned();
+
+      expect(mockTrackerRepository.createQueryBuilder).toHaveBeenCalledWith('tracker');
+      expect(mockQueryBuilder.leftJoin).toHaveBeenCalledWith('tracker.resident', 'resident');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('resident.Resident_ID IS NULL');
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
+      expect(result).toEqual(trackers);
     });
   });
 });

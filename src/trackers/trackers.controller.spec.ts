@@ -8,6 +8,7 @@ const mockTrackersService = {
   findOne: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+  findUnassigned: jest.fn(),
 };
 
 describe('TrackersController', () => {
@@ -106,6 +107,28 @@ describe('TrackersController', () => {
       await controller.remove(1);
 
       expect(mockTrackersService.remove).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('findUnassigned', () => {
+    it('should return all trackers without a resident', async () => {
+      const trackers = [
+        { Tracker_ID: 2, IP: '192.168.1.2', IsOnline: false, Battery: 50 },
+      ];
+      mockTrackersService.findUnassigned.mockResolvedValue(trackers);
+
+      const result = await controller.findUnassigned();
+
+      expect(mockTrackersService.findUnassigned).toHaveBeenCalled();
+      expect(result).toEqual(trackers);
+    });
+
+    it('should return empty array if no unassigned trackers', async () => {
+      mockTrackersService.findUnassigned.mockResolvedValue([]);
+
+      const result = await controller.findUnassigned();
+
+      expect(result).toEqual([]);
     });
   });
 });

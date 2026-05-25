@@ -41,4 +41,11 @@ export class TrackersController {
   {
     return this.trackersService.remove(id);
   }
+
+  // GET /trackers/unassigned
+  @Get('unassigned')
+  findUnassigned(): Promise<Tracker[]> 
+  {
+    return this.trackersService.findUnassigned();
+  }
 }
