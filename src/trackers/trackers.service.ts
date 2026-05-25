@@ -14,7 +14,7 @@ export class TrackersService {
   /**
    * Creates a new tracker.
    * @param dto 
-   * @returns 
+   * @returns A promise resolving to the created Tracker entity.
    */
   async create(dto: CreateTrackerDto): Promise<Tracker> 
   {
@@ -27,7 +27,7 @@ export class TrackersService {
 
   /**
    * Finds all trackers.
-   * @returns 
+   * @returns A promise resolving to an array of Tracker entities.
    */
   async findAll(): Promise<Tracker[]> 
   {
@@ -37,7 +37,7 @@ export class TrackersService {
   /**
    * Finds a specific tracker by ID.
    * @param trackerId 
-   * @returns 
+   * @returns A promise resolving to a Tracker entity or null if not found.
    */
   async findOne(trackerId: number): Promise<Tracker | null> 
   {
@@ -50,7 +50,7 @@ export class TrackersService {
    * Updates a tracker by ID.
    * @param trackerId 
    * @param dto 
-   * @returns 
+   * @returns A promise resolving to the updated Tracker entity or null if not found.
    */
   async update(trackerId: number, dto: UpdateTrackerDto): Promise<Tracker | null> 
   {
@@ -62,7 +62,7 @@ export class TrackersService {
    * Sets the online status of a tracker, typically called when a tracker connects or disconnects.
    * @param trackerId 
    * @param isOnline 
-   * @returns 
+   * @returns A promise resolving to the updated Tracker entity or null if not found.
    */
   async setOnlineStatus(trackerId: number, isOnline: boolean): Promise<Tracker | null> 
   {
@@ -74,7 +74,7 @@ export class TrackersService {
    * Updates the battery level of a tracker, typically called when a tracker reports its battery status.
    * @param trackerId 
    * @param battery 
-   * @returns 
+   * @returns A promise resolving to the updated Tracker entity or null if not found.
    */
   async updateBattery(trackerId: number, battery: number): Promise<Tracker | null> 
   {
