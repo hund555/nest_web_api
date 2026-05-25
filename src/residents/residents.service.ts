@@ -13,6 +13,12 @@ export class ResidentsService {
     private readonly trackersService: TrackersService,
   ) {}
 
+  /**
+   * Creates a new resident in the database. If a Tracker_ID is provided, it validates that the tracker exists before associating it with the resident.
+   * @param dto 
+   * @returns A promise resolving to the created Resident entity, including its associated tracker if applicable.
+    * @throws BadRequestException if a Tracker_ID is provided but the tracker does not exist.
+   */
   async create(dto: CreateResidentDto): Promise<Resident> 
   {
     if (dto.Tracker_ID) 
@@ -31,6 +37,10 @@ export class ResidentsService {
     return this.residentRepository.save(resident);
   }
 
+  /**
+   * Retrieves all residents from the database, including their associated trackers.
+   * @returns A promise resolving to an array of Resident entities with their trackers.
+   */
   async findAll(): Promise<Resident[]> 
   {
     return this.residentRepository.find({
@@ -38,6 +48,11 @@ export class ResidentsService {
     });
   }
 
+  /**
+   * Retrieves a resident by their ID, including their associated tracker.
+   * @param residentId The ID of the resident to retrieve.
+   * @returns A promise resolving to the Resident entity with their tracker, or null if not found.
+   */
   async findOne(residentId: number): Promise<Resident | null> 
   {
     return this.residentRepository.findOne({
@@ -46,6 +61,12 @@ export class ResidentsService {
     });
   }
 
+  /**
+   * Updates a resident's information in the database. If a Tracker_ID is provided in the update DTO, it validates that the tracker exists before updating the association.
+   * @param residentId The ID of the resident to update.
+   * @param dto The update DTO containing the new information.
+   * @returns A promise resolving to the updated Resident entity, or null if not found.
+   */
   async update(residentId: number, dto: UpdateResidentDto): Promise<Resident | null> 
   {
     await this.residentRepository.update(residentId, {
@@ -55,11 +76,20 @@ export class ResidentsService {
     return this.findOne(residentId);
   }
 
+  /**
+   * Removes a resident from the database.
+   * @param residentId The ID of the resident to remove.
+   */
   async remove(residentId: number): Promise<void> 
   {
     await this.residentRepository.delete(residentId);
   }
 
+  /**
+   * Finds a resident by their associated tracker ID.
+   * @param trackerId The ID of the tracker to search for.
+   * @returns A promise resolving to the Resident entity with the specified tracker, or null if not found.
+   */
   async findByTracker(trackerId: number): Promise<Resident | null> 
   {
     return this.residentRepository.findOne({
