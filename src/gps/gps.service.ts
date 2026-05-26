@@ -5,49 +5,25 @@ import { GpsLocation } from '../entities/gps.entity';
 import { GpsLocationDto } from '../dto/gps.dto';
 
 @Injectable()
-export class GpsService {
+export class GpsService 
+{
   constructor(
     @InjectRepository(GpsLocation)
     private readonly gpsRepository: Repository<GpsLocation>,
-    @InjectRepository(Tracker)
-    private readonly trackerRepository: Repository<Tracker>,
-  ) { }
+  ) {}
 
   /**
-   * Persists a new GPS location for the specified tracker.
-   *
-   * Finds the tracker by DTO. If the tracker exists, marks it online,
-   * updates its last seen timestamp, and saves the incoming latitude/longitude.
-   *
-   * @param dto GPS payload containing tracker ID, latitude and longitude
-   * @returns the saved GpsLocation entity
+   * Saves a new GPS location.
+   * @param dto 
+   * @returns 
    */
-  async saveLocation(dto: GpsLocationDto): Promise<GpsLocation> {
-
-    // Find tracker
-    const tracker = await this.trackerRepository.findOne({
-      where: {
-        Tracker_ID: dto.Tracker_ID
-      }
-    });
-
-    if (!tracker) {
-      throw new Error('Tracker not found');
-    }
-
-    // Tracker is online because GPS data arrived
-    tracker.IsOnline = true;
-    tracker.LastSeen = new Date();
-
-    await this.trackerRepository.save(tracker);
-
-    // Save GPS location
+  async saveLocation(dto: GpsLocationDto): Promise<GpsLocation> 
+  {
     const location = this.gpsRepository.create({
-      tracker,
+      tracker: { Tracker_ID: dto.Tracker_ID },
       lat: dto.lat,
       lng: dto.lng,
     });
-
     return this.gpsRepository.save(location);
   }
 
@@ -56,7 +32,8 @@ export class GpsService {
    * @param trackerId 
    * @returns 
    */
-  async getLatestByTracker(trackerId: number): Promise<GpsLocation | null> {
+  async getLatestByTracker(trackerId: number): Promise<GpsLocation | null> 
+  {
     return this.gpsRepository.findOne({
       where: { tracker: { Tracker_ID: trackerId } },
       order: { Timestamp: 'DESC' },
@@ -69,7 +46,8 @@ export class GpsService {
    * @param trackerId 
    * @returns 
    */
-  async get5LatestsByTracker(trackerId: number): Promise<GpsLocation[]> {
+  async get5LatestsByTracker(trackerId: number): Promise<GpsLocation[]> 
+  {
     return this.gpsRepository.find({
       where: { tracker: { Tracker_ID: trackerId } },
       order: { Timestamp: 'DESC' },

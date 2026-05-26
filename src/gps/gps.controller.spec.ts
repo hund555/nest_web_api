@@ -1,67 +1,99 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GpsController } from './gps.controller';
 import { GpsService } from './gps.service';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { GpsLocation } from '../entities/gps.entity';
 
-const mockGpsService = {
-  getLatestByTracker: jest.fn(),
-  getAllByTracker: jest.fn(),
-  get5LatestsByTracker: jest.fn(),
+// Mock repository — simulates TypeORM without hitting the DB
+const mockGpsRepository = 
+{
+  create: jest.fn(),
+  save: jest.fn(),
+  find: jest.fn(),
+  findOne: jest.fn(),
 };
 
-describe('GpsController', () => {
-  let controller: GpsController;
+describe('GpsService', () => {
+  let service: GpsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [GpsController],
-      providers: [{ provide: GpsService, useValue: mockGpsService }],
+      providers: [
+        GpsService,
+        {
+          provide: getRepositoryToken(GpsLocation),
+          useValue: mockGpsRepository,
+        },
+      ],
     }).compile();
 
-    controller = module.get<GpsController>(GpsController);
+    service = module.get<GpsService>(GpsService);
   });
 
   afterEach(() => jest.clearAllMocks());
 
   it('should be defined', () => {
-    expect(controller).toBeDefined();
+    expect(service).toBeDefined();
   });
 
-  describe('getLatest', () => {
+  describe('saveLocation', () => {
+    it('should create and save a gps location', async () => {
+      const dto = { Tracker_ID: 1, lat: 55.123, lng: 9.456 };
+      const created = { ID: 1, tracker: { Tracker_ID: 1 }, lat: 55.123, lng: 9.456, Timestamp: new Date() };
+
+      mockGpsRepository.create.mockReturnValue(created);
+      mockGpsRepository.save.mockResolvedValue(created);
+
+      const result = await service.saveLocation(dto);
+
+      expect(mockGpsRepository.create).toHaveBeenCalledWith({
+        tracker: { Tracker_ID: dto.Tracker_ID },
+        lat: dto.lat,
+        lng: dto.lng,
+      });
+      expect(mockGpsRepository.save).toHaveBeenCalledWith(created);
+      expect(result).toEqual(created);
+    });
+  });
+
+  describe('getLatestByTracker', () => {
     it('should return the latest location for a tracker', async () => {
       const location = { ID: 1, tracker: { Tracker_ID: 1 }, lat: 55.123, lng: 9.456 };
-      mockGpsService.getLatestByTracker.mockResolvedValue(location);
+      mockGpsRepository.findOne.mockResolvedValue(location);
 
-      const result = await controller.getLatest(1);
+      const result = await service.getLatestByTracker(1);
 
-      expect(mockGpsService.getLatestByTracker).toHaveBeenCalledWith(1);
+      expect(mockGpsRepository.findOne).toHaveBeenCalledWith({
+        where: { tracker: { Tracker_ID: 1 } },
+        order: { Timestamp: 'DESC' },
+        relations: ['tracker'],
+      });
       expect(result).toEqual(location);
     });
 
     it('should return null if no location found', async () => {
-      mockGpsService.getLatestByTracker.mockResolvedValue(null);
-
-      const result = await controller.getLatest(999);
-
-      expect(mockGpsService.getLatestByTracker).toHaveBeenCalledWith(999);
+      mockGpsRepository.findOne.mockResolvedValue(null);
+      const result = await service.getLatestByTracker(999);
       expect(result).toBeNull();
     });
   });
 
-  describe('getLatest5', () => {
-    it('should return the 5 latest locations for a tracker', async () => {
-      const locations = Array.from({ length: 5 }, (_, i) => ({
-        ID: i + 1,
-        tracker: { Tracker_ID: 1 },
-        lat: 55.123 + i,
-        lng: 9.456 + i,
-      }));
-      mockGpsService.get5LatestsByTracker.mockResolvedValue(locations);
+    describe('get5LatestsByTracker', () => {
+      it('should return the 5 latest locations for a tracker', async () => {
+        const locations = [
+          { ID: 1, tracker: { Tracker_ID: 1 }, lat: 55.123, lng: 9.456 },
+          { ID: 2, tracker: { Tracker_ID: 1 }, lat: 55.456, lng: 9.789 },
+        ];
+        mockGpsRepository.find.mockResolvedValue(locations);
 
-      const result = await controller.getLatest5(1);
+        const result = await service.get5LatestsByTracker(1);
 
-      expect(mockGpsService.get5LatestsByTracker).toHaveBeenCalledWith(1);
-      expect(result).toHaveLength(5);
-      expect(result).toEqual(locations);
+        expect(mockGpsRepository.find).toHaveBeenCalledWith({
+            where: { tracker: { Tracker_ID: 1 } },
+            order: { Timestamp: 'DESC' },
+            take: 5,
+            relations: ['tracker'],
+        });
+        expect(result).toEqual(locations);
+      });
     });
-  });
 });
