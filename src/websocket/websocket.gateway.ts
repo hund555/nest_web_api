@@ -114,6 +114,8 @@ export class WebsocketGateway
       lng: payload.lng,
     });
 
+    await this.trackersService.updateLastSeen(trackerId);
+
     this.logger.log(`GPS saved for tracker ${trackerId}`);
   }
 

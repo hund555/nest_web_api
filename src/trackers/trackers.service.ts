@@ -5,7 +5,8 @@ import { Tracker } from '../entities/tracker.entity';
 import { CreateTrackerDto, UpdateTrackerDto } from '../dto/tracker.dto';
 
 @Injectable()
-export class TrackersService {
+export class TrackersService 
+{
   constructor(
     @InjectRepository(Tracker)
     private readonly trackerRepository: Repository<Tracker>,
@@ -102,5 +103,47 @@ export class TrackersService {
     .leftJoin('tracker.resident', 'resident')
     .where('resident.Resident_ID IS NULL')
     .getMany();
+  }
+
+  /**
+   * Updates the last seen timestamp of a tracker. This is typically called when a tracker reports its location or battery status to keep track of its last active time.
+   * @param trackerId 
+   * @returns A promise resolving to the updated Tracker entity or null if not found.
+   */
+  async updateLastSeen(trackerId: number): Promise<Tracker | null>
+  {
+    await this.trackerRepository.update(trackerId, { LastSeen: new Date() });
+    return this.findOne(trackerId);
+  }
+
+  /**
+   * Checks all trackers and sets those that haven't been seen for a certain period (e.g., 60 seconds) to offline. This is typically called periodically to ensure tracker statuses are up-to-date.
+   */
+  async updateOfflineTrackers(): Promise<void> 
+  {
+    const trackers = await this.trackerRepository.find();
+    const now = new Date();
+
+    for (const tracker of trackers) 
+    {
+      // Never seen before
+      if (!tracker.LastSeen) 
+      {
+        tracker.IsOnline = false;
+        await this.trackerRepository.save(tracker);
+        continue;
+      }
+
+      // Difference in seconds
+      const diffMs = now.getTime() - new Date(tracker.LastSeen).getTime();
+      const diffSeconds = diffMs / 1000;
+      
+      // Offline after 60 sec
+      if (diffSeconds > 60) 
+      {
+        tracker.IsOnline = false;
+        await this.trackerRepository.save(tracker);
+      }
+    }
   }
 }

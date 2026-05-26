@@ -189,4 +189,76 @@ describe('TrackersService', () => {
       expect(result).toEqual(trackers);
     });
   });
+
+  describe('updateLastSeen', () => {
+    it('should update LastSeen and return the tracker', async () => {
+      const updated = { Tracker_ID: 1, IP: '192.168.1.1', IsOnline: true, LastSeen: new Date() };
+
+      mockTrackerRepository.update.mockResolvedValue({ affected: 1 });
+      mockTrackerRepository.findOne.mockResolvedValue(updated);
+
+      const result = await service.updateLastSeen(1);
+
+      expect(mockTrackerRepository.update).toHaveBeenCalledWith(1, {
+        LastSeen: expect.any(Date),
+      });
+      expect(result).toEqual(updated);
+    });
+
+    it('should return null if tracker not found', async () => {
+      mockTrackerRepository.update.mockResolvedValue({ affected: 0 });
+      mockTrackerRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.updateLastSeen(999);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('updateOfflineTrackers', () => {
+    it('should set tracker offline if LastSeen is null', async () => {
+      const tracker = { Tracker_ID: 1, IP: '192.168.1.1', IsOnline: true, LastSeen: null };
+      mockTrackerRepository.find.mockResolvedValue([tracker]);
+      mockTrackerRepository.save.mockResolvedValue({ ...tracker, IsOnline: false });
+
+      await service.updateOfflineTrackers();
+
+      expect(mockTrackerRepository.save).toHaveBeenCalledWith({
+        ...tracker,
+        IsOnline: false,
+      });
+    });
+
+    it('should set tracker offline if LastSeen is more than 60 seconds ago', async () => {
+      const oldDate = new Date(Date.now() - 120000); // 2 minutes ago
+      const tracker = { Tracker_ID: 1, IP: '192.168.1.1', IsOnline: true, LastSeen: oldDate };
+      mockTrackerRepository.find.mockResolvedValue([tracker]);
+      mockTrackerRepository.save.mockResolvedValue({ ...tracker, IsOnline: false });
+
+      await service.updateOfflineTrackers();
+
+      expect(mockTrackerRepository.save).toHaveBeenCalledWith({
+        ...tracker,
+        IsOnline: false,
+      });
+    });
+
+    it('should not set tracker offline if LastSeen is within 60 seconds', async () => {
+      const recentDate = new Date(Date.now() - 30000); // 30 seconds ago
+      const tracker = { Tracker_ID: 1, IP: '192.168.1.1', IsOnline: true, LastSeen: recentDate };
+      mockTrackerRepository.find.mockResolvedValue([tracker]);
+
+      await service.updateOfflineTrackers();
+
+      expect(mockTrackerRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should handle empty tracker list', async () => {
+      mockTrackerRepository.find.mockResolvedValue([]);
+
+      await service.updateOfflineTrackers();
+
+      expect(mockTrackerRepository.save).not.toHaveBeenCalled();
+    });
+  });
 });

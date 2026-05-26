@@ -8,4 +8,5 @@ export class UpdateTrackerDto {
   Port?: number;
   IsOnline?: boolean;
   Battery?: number;
+  LastSeen?: Date;
 }

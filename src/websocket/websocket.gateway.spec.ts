@@ -13,6 +13,7 @@ const mockTrackersService = {
   findOne: jest.fn(),
   setOnlineStatus: jest.fn(),
   updateBattery: jest.fn(),
+  updateLastSeen: jest.fn(),
 };
 
 const mockClient = {
@@ -148,6 +149,23 @@ describe('WebsocketGateway', () => {
         JSON.stringify({ event: 'error', data: 'Not identified, please identify or register first' }),
       );
       expect(mockGpsService.saveLocation).not.toHaveBeenCalled();
+    });
+
+    it('should save GPS location and update LastSeen if client is identified', async () => {
+      mockClient.trackerId = 1;
+      const payload = { Tracker_ID: 1, lat: 55.123, lng: 9.456 };
+
+      mockGpsService.saveLocation.mockResolvedValue(undefined);
+      mockTrackersService.updateLastSeen.mockResolvedValue(undefined); // add this
+
+      await gateway.handleGps(mockClient as any, payload);
+
+      expect(mockGpsService.saveLocation).toHaveBeenCalledWith({
+        Tracker_ID: 1,
+        lat: 55.123,
+        lng: 9.456,
+      });
+      expect(mockTrackersService.updateLastSeen).toHaveBeenCalledWith(1); // add this
     });
   });
 
