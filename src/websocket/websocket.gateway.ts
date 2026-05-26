@@ -8,10 +8,9 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, WebSocket } from 'ws';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Tracker } from '../entities/tracker.entity';
-import { GpsLocation } from '../entities/gps.entity';
+import { GpsService } from '../gps/gps.service';
+import { TrackersService } from '../trackers/trackers.service';
+import { GpsLocationDto } from '../dto/gps.dto';
 
 @WebSocketGateway(5000)
 export class WebsocketGateway
@@ -20,114 +19,123 @@ export class WebsocketGateway
   server!: Server;
 
   constructor(
-
     private readonly logger: Logger,
+    private readonly gpsService: GpsService,
+    private readonly trackersService: TrackersService,
+  ) {}
 
-    @InjectRepository(Tracker)
-    private readonly trackerRepository: Repository<Tracker>,
-
-    @InjectRepository(GpsLocation)
-    private readonly gpsRepository: Repository<GpsLocation>,
-
-  ) { }
-  private trackerConnections =
-    new Map<WebSocket, number>();
-
-  afterInit(server: Server) {
+  afterInit() 
+  {
     this.logger.log('WebSocket server initialized');
   }
 
-  handleConnection(client: WebSocket) {
-
+  handleConnection(client: WebSocket) 
+  {
     this.logger.log('Client connected');
-
-    client.send('Connected');
+    client.send(JSON.stringify({ event: 'connected', data: 'Welcome!' }));
   }
 
-  async handleDisconnect(client: WebSocket) {
-
-    const trackerId =
-      this.trackerConnections.get(client);
-
-    this.logger.log(
-      `Tracker ${trackerId} disconnected`
-    );
-
-    if (trackerId) {
-
-      const tracker =
-        await this.trackerRepository.findOne({
-          where: {
-            Tracker_ID: trackerId
-          }
-        });
-
-      if (tracker) {
-
-        tracker.IsOnline = false;
-
-        await this.trackerRepository.save(tracker);
-      }
+  async handleDisconnect(client: WebSocket) 
+  {
+    const trackerId = this.getTrackerIdFromClient(client);
+    if (trackerId) 
+    {
+      await this.trackersService.setOnlineStatus(trackerId, false);
+      this.logger.log(`Tracker ${trackerId} went offline`);
+    } 
+    else 
+    {
+      this.logger.log('Unknown client disconnected');
     }
-
-    this.trackerConnections.delete(client);
   }
 
-  @SubscribeMessage('gps')
-  async handleGps(
-    client: WebSocket,
-    payload: any
-  ): Promise<void> {
+  // Pi has no id.txt — create new tracker in DB and return the ID
+  @SubscribeMessage('register')
+  async handleRegister(client: WebSocket, payload: { IP: string, Port: number }) 
+  {
+    const tracker = await this.trackersService.create({ IP: payload.IP, Port: payload.Port });
+    await this.trackersService.setOnlineStatus(tracker.Tracker_ID, true);
+    (client as any).trackerId = tracker.Tracker_ID;
 
-    const trackerId = payload.trackerId;
+    client.send(JSON.stringify(
+    {
+      event: 'registered',
+      data: { Tracker_ID: tracker.Tracker_ID },
+    }));
 
-    this.trackerConnections.set(
-      client,
-      trackerId
-    );
+    this.logger.log(`New tracker registered with ID ${tracker.Tracker_ID}`);
+  }
 
-    const tracker =
-      await this.trackerRepository.findOne({
-        where: {
-          Tracker_ID: trackerId
-        }
-      });
+  // Pi has id.txt — just mark as online
+  @SubscribeMessage('identify')
+  async handleIdentify(client: WebSocket, payload: { Tracker_ID: number }) 
+  {
+    const tracker = await this.trackersService.findOne(payload.Tracker_ID);
 
-    if (!tracker) {
-
-      this.logger.error(
-        `Tracker ${trackerId} not found`
-      );
-
+    if (!tracker) 
+    {
+      // ID in file no longer exists in DB — treat as new registration
+      client.send(JSON.stringify({
+        event: 'error',
+        data: 'Tracker ID not found, please re-register',
+      }));
       return;
     }
 
-    // Tracker online
-    tracker.IsOnline = true;
+    await this.trackersService.setOnlineStatus(payload.Tracker_ID, true);
+    (client as any).trackerId = payload.Tracker_ID;
 
-    tracker.LastSeen = new Date();
+    client.send(JSON.stringify({
+      event: 'identified',
+      data: { Tracker_ID: payload.Tracker_ID },
+    }));
 
-    await this.trackerRepository.save(tracker);
+    this.logger.log(`Tracker ${payload.Tracker_ID} identified and online`);
+  }
 
-    // Save GPS
-    const gps =
-      this.gpsRepository.create({
+  // Pi sends GPS location
+  @SubscribeMessage('gps')
+  async handleGps(client: WebSocket, payload: GpsLocationDto) 
+  {
+    const trackerId = this.getTrackerIdFromClient(client);
+    if (!trackerId) 
+    {
+      client.send(JSON.stringify({
+        event: 'error',
+        data: 'Not identified, please identify or register first',
+      }));
+      return;
+    }
 
-        tracker,
+    await this.gpsService.saveLocation({
+      Tracker_ID: trackerId,
+      lat: payload.lat,
+      lng: payload.lng,
+    });
 
-        lat: payload.lat,
+    await this.trackersService.updateLastSeen(trackerId);
 
-        lng: payload.lng
-      });
+    this.logger.log(`GPS saved for tracker ${trackerId}`);
+  }
 
-    await this.gpsRepository.save(gps);
+  // Pi sends battery level
+  @SubscribeMessage('battery')
+  async handleBattery(client: WebSocket, payload: { battery: number }) 
+  {
+    const trackerId = this.getTrackerIdFromClient(client);
+    if (!trackerId) return;
 
-    this.logger.log(
-      `Tracker ${trackerId} ONLINE`
-    );
+    await this.trackersService.updateBattery(trackerId, payload.battery);
+    this.logger.log(`Battery updated for tracker ${trackerId}: ${payload.battery}%`);
+  }
 
-    this.logger.log(
-      `GPS: ${payload.lat}, ${payload.lng}`
-    );
+  /**
+   * Retrieves the tracker ID from the client's connection context. This is set when the client registers or identifies itself.
+   * @param client 
+   * @returns 
+   */
+  private getTrackerIdFromClient(client: WebSocket): number | null 
+  {
+    return (client as any).trackerId ?? null;
   }
 }

@@ -2,13 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GpsLocation } from '../entities/gps.entity';
-import { Tracker } from '../entities/tracker.entity';
-
-export class GpsLocationDto {
-  Tracker_ID: number;
-  lat: number;
-  lng: number;
-}
+import { GpsLocationDto } from '../dto/gps.dto';
 
 @Injectable()
 export class GpsService {
