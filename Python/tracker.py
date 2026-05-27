@@ -1,12 +1,9 @@
-import websocket
+from pi_connect import PiConnection
 import json
 import serial
 import pynmea2
 import time
 
-WS_URL = "ws://YOUR_PC_IP:5000"
-
-TRACKER_ID = 1
 
 PORT = "/dev/serial0"
 
@@ -16,11 +13,12 @@ ser = serial.Serial(
     timeout=1
 )
 
-ws = websocket.WebSocket()
+def on_server_message(event, data):
+    print("Server sent: {event}: {data}")
 
-ws.connect(WS_URL)
-
-print("Connected to websocket")
+# Connect to server
+connection = PiConnection(on_message=on_server_message)
+connection.start()
 
 while True:
 
@@ -34,25 +32,15 @@ while True:
         if "GGA" in line:
 
             msg = pynmea2.parse(line)
+            connection.send_gps(msg.latitude, msg.longitude)
 
-            data = {
-                "event": "gps",
-                "data": {
-                    "trackerId": TRACKER_ID,
-                    "lat": msg.latitude,
-                    "lng": msg.longitude
-                }
-            }
-
-            ws.send(json.dumps({"event": "gps", "data": data}))
-
-            print("GPS sent:", data)
+            print("GPS sent:", (msg.latitude, msg.longitude))
 
             time.sleep(5)
 
     except KeyboardInterrupt:
 
-        ws.close()
+        connection.stop()
 
         print("Stopped")
 
