@@ -24,6 +24,7 @@ const mockTrackersService = {
 const mockClient = {
   send: jest.fn(),
   trackerId: null as number | null,
+  clientType: null as string | null,
 };
 
 describe('WebsocketGateway', () => {
@@ -46,6 +47,7 @@ describe('WebsocketGateway', () => {
   afterEach(() => {
     jest.clearAllMocks();
     mockClient.trackerId = null;
+    mockClient.clientType = null;
   });
 
   it('should be defined', () => {
@@ -63,8 +65,9 @@ describe('WebsocketGateway', () => {
   });
 
   describe('handleDisconnect', () => {
-    it('should set tracker offline if client was identified', async () => {
+    it('should set tracker offline if client was identified as pi', async () => {
       mockClient.trackerId = 1;
+      mockClient.clientType = 'pi';
       mockTrackersService.setOnlineStatus.mockResolvedValue(undefined);
 
       await gateway.handleDisconnect(mockClient as any);
@@ -72,8 +75,17 @@ describe('WebsocketGateway', () => {
       expect(mockTrackersService.setOnlineStatus).toHaveBeenCalledWith(1, false);
     });
 
+    it('should not call setOnlineStatus if client was dashboard', async () => {
+      mockClient.clientType = 'dashboard';
+
+      await gateway.handleDisconnect(mockClient as any);
+
+      expect(mockTrackersService.setOnlineStatus).not.toHaveBeenCalled();
+    });
+
     it('should not call setOnlineStatus if client was not identified', async () => {
       mockClient.trackerId = null;
+      mockClient.clientType = null;
 
       await gateway.handleDisconnect(mockClient as any);
 
@@ -101,30 +113,60 @@ describe('WebsocketGateway', () => {
   });
 
   describe('handleIdentify', () => {
-    it('should set tracker online and confirm identification', async () => {
-      const payload = { Tracker_ID: 1 };
-      const tracker = { Tracker_ID: 1, IP: '192.168.1.1', Port: 8000, IsOnline: false, Battery: 80 };
+    it('should identify a dashboard client', async () => {
+      await gateway.handleIdentify(mockClient as any, { clientType: 'dashboard' });
 
+      expect(mockClient.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          event: 'identified',
+          data: { clientType: 'dashboard' },
+        }),
+      );
+      expect((mockClient as any).clientType).toBe('dashboard');
+      expect(mockTrackersService.setOnlineStatus).not.toHaveBeenCalled();
+    });
+
+    it('should send error if pi client does not provide Tracker_ID', async () => {
+      await gateway.handleIdentify(mockClient as any, { clientType: 'pi' });
+
+      expect(mockClient.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          event: 'error',
+          data: 'Tracker_ID is required for pi clients',
+        }),
+      );
+      expect(mockTrackersService.setOnlineStatus).not.toHaveBeenCalled();
+    });
+
+    it('should identify a pi client and set online status', async () => {
+      const tracker = { Tracker_ID: 1, IP: '192.168.1.1', IsOnline: false };
       mockTrackersService.findOne.mockResolvedValue(tracker);
       mockTrackersService.setOnlineStatus.mockResolvedValue(undefined);
 
-      await gateway.handleIdentify(mockClient as any, payload);
+      await gateway.handleIdentify(mockClient as any, { clientType: 'pi', Tracker_ID: 1 });
 
       expect(mockTrackersService.findOne).toHaveBeenCalledWith(1);
       expect(mockTrackersService.setOnlineStatus).toHaveBeenCalledWith(1, true);
       expect(mockClient.send).toHaveBeenCalledWith(
-        JSON.stringify({ event: 'identified', data: { Tracker_ID: 1 } }),
+        JSON.stringify({
+          event: 'identified',
+          data: { Tracker_ID: 1, clientType: 'pi' },
+        }),
       );
+      expect((mockClient as any).clientType).toBe('pi');
       expect((mockClient as any).trackerId).toBe(1);
     });
 
     it('should send error if tracker ID not found in DB', async () => {
       mockTrackersService.findOne.mockResolvedValue(null);
 
-      await gateway.handleIdentify(mockClient as any, { Tracker_ID: 999 });
+      await gateway.handleIdentify(mockClient as any, { clientType: 'pi', Tracker_ID: 999 });
 
       expect(mockClient.send).toHaveBeenCalledWith(
-        JSON.stringify({ event: 'error', data: 'Tracker ID not found, please re-register' }),
+        JSON.stringify({
+          event: 'error',
+          data: 'Tracker ID not found, please re-register',
+        }),
       );
       expect(mockTrackersService.setOnlineStatus).not.toHaveBeenCalled();
     });

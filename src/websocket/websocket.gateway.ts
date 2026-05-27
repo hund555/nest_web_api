@@ -37,8 +37,18 @@ export class WebsocketGateway
     client.send(JSON.stringify({ event: 'connected', data: 'Welcome!' }));
   }
 
+  /**
+   * Handles client disconnection events. If a tracker client disconnects, it updates the tracker's online status in the database. Dashboard client disconnections are simply logged.
+   * @param client 
+   * @returns 
+   */
   async handleDisconnect(client: WebSocket) 
   {
+    if ((client as any).clientType === 'dashboard')
+    {
+      this.logger.log('Dashboard client disconnected');
+      return;
+    }
     const trackerId = this.getTrackerIdFromClient(client);
     if (trackerId) 
     {
@@ -68,10 +78,36 @@ export class WebsocketGateway
     this.logger.log(`New tracker registered with ID ${tracker.Tracker_ID}`);
   }
 
-  // Pi has id.txt — just mark as online
+  /**
+   * Handles client identification messages. This allows clients to identify themselves as either a tracker (Pi) or a dashboard, and associates tracker clients with their database ID for future interactions.
+   * @param client 
+   * @param payload 
+   * @returns 
+   */
   @SubscribeMessage('identify')
-  async handleIdentify(client: WebSocket, payload: { Tracker_ID: number }) 
+  async handleIdentify(client: WebSocket, payload: { Tracker_ID?: number; clientType?: 'pi' | 'dashboard' }) 
   {
+    // Dashboard client identification
+    if (payload.clientType === 'dashboard')
+    {
+      (client as any).clientType = 'dashboard';
+      client.send(JSON.stringify({
+        event: 'identified',
+        data: { clientType: 'dashboard' },
+      }));
+      this.logger.log('Dashboard client identified');
+      return;
+    }
+
+    if (!payload.Tracker_ID)
+    {
+      client.send(JSON.stringify({
+        event: 'error',
+        data: 'Tracker_ID is required for pi clients',
+      }));
+      return;
+    }
+    
     const tracker = await this.trackersService.findOne(payload.Tracker_ID);
 
     if (!tracker) 
@@ -86,10 +122,11 @@ export class WebsocketGateway
 
     await this.trackersService.setOnlineStatus(payload.Tracker_ID, true);
     (client as any).trackerId = payload.Tracker_ID;
+    (client as any).clientType = 'pi';
 
     client.send(JSON.stringify({
       event: 'identified',
-      data: { Tracker_ID: payload.Tracker_ID },
+      data: { Tracker_ID: payload.Tracker_ID, clientType: 'pi' },
     }));
 
     this.logger.log(`Tracker ${payload.Tracker_ID} identified and online`);
