@@ -11,6 +11,11 @@ export class AlarmService
     private readonly alarmRepository: Repository<Alarm>,
   ) {}
 
+  /**
+   * Triggers an alarm for the specified tracker defined by trackerId. Creates a new alarm entry in the database with the current timestamp.
+   * @param trackerId 
+   * @returns 
+   */
   async triggerAlarm(trackerId: number): Promise<Alarm> 
   {
     const alarm = this.alarmRepository.create({
@@ -19,6 +24,10 @@ export class AlarmService
     return this.alarmRepository.save(alarm);
   }
 
+  /**
+   * Finds all alarm entries in the database, ordered by timestamp in descending order.
+   * @returns 
+   */
   async findAll(): Promise<Alarm[]> 
   {
     return this.alarmRepository.find({
@@ -27,6 +36,11 @@ export class AlarmService
     });
   }
 
+  /**
+   * Finds all alarm entries for the specified tracker, ordered by timestamp in descending order.
+   * @param trackerId 
+   * @returns 
+   */
   async findByTracker(trackerId: number): Promise<Alarm[]> 
   {
     return this.alarmRepository.find({
