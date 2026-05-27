@@ -11,6 +11,7 @@ import { Server, WebSocket } from 'ws';
 import { GpsService } from '../gps/gps.service';
 import { TrackersService } from '../trackers/trackers.service';
 import { GpsLocationDto } from '../dto/gps.dto';
+import { AlarmService } from '../alarm/alarm.service';
 
 @WebSocketGateway(5000)
 export class WebsocketGateway
@@ -22,6 +23,7 @@ export class WebsocketGateway
     private readonly logger: Logger,
     private readonly gpsService: GpsService,
     private readonly trackersService: TrackersService,
+    private readonly alarmService: AlarmService,
   ) {}
 
   afterInit() 
@@ -93,7 +95,12 @@ export class WebsocketGateway
     this.logger.log(`Tracker ${payload.Tracker_ID} identified and online`);
   }
 
-  // Pi sends GPS location
+  /**
+   * Handles incoming GPS location messages from connected clients.
+   * @param client 
+   * @param payload 
+   * @returns 
+   */
   @SubscribeMessage('gps')
   async handleGps(client: WebSocket, payload: GpsLocationDto) 
   {
@@ -137,5 +144,44 @@ export class WebsocketGateway
   private getTrackerIdFromClient(client: WebSocket): number | null 
   {
     return (client as any).trackerId ?? null;
+  }
+
+  /**
+   * Handles incoming alarm messages from connected clients.
+   * @param client 
+   * @returns 
+   */
+  @SubscribeMessage('alarm')
+  async handleAlarm(client: WebSocket) 
+  {
+    const trackerId = this.getTrackerIdFromClient(client);
+    if (!trackerId) 
+    {
+      client.send(JSON.stringify({
+        event: 'error',
+        data: 'Not identified, please identify or register first',
+      }));
+      return;
+    }
+
+    const alarm = await this.alarmService.triggerAlarm(trackerId);
+
+    // Broadcast alarm to all connected dashboard clients
+    this.server.clients.forEach(c => {
+      if (c.readyState === WebSocket.OPEN && (c as any).clientType === 'dashboard') 
+      {
+        c.send(JSON.stringify({
+          event: 'alarm',
+          data: 
+          {
+            Alarm_ID: alarm.Alarm_ID,
+            Tracker_ID: trackerId,
+            Timestamp: alarm.Timestamp,
+          },
+        }));
+      }
+    });
+
+    this.logger.log(`Alarm triggered by tracker ${trackerId}`);
   }
 }

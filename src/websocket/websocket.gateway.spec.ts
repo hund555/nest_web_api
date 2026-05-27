@@ -3,6 +3,11 @@ import { WebsocketGateway } from './websocket.gateway';
 import { GpsService } from '../gps/gps.service';
 import { TrackersService } from '../trackers/trackers.service';
 import { Logger } from '@nestjs/common';
+import { AlarmService } from '../alarm/alarm.service';
+
+const mockAlarmService = {
+  triggerAlarm: jest.fn(),
+};
 
 const mockGpsService = {
   saveLocation: jest.fn(),
@@ -31,6 +36,7 @@ describe('WebsocketGateway', () => {
         Logger,
         { provide: GpsService, useValue: mockGpsService },
         { provide: TrackersService, useValue: mockTrackersService },
+        { provide: AlarmService, useValue: mockAlarmService },
       ],
     }).compile();
 
@@ -185,6 +191,82 @@ describe('WebsocketGateway', () => {
       await gateway.handleBattery(mockClient as any, { battery: 42 });
 
       expect(mockTrackersService.updateBattery).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleAlarm', () => {
+    it('should trigger alarm and broadcast to dashboard clients if identified', async () => {
+      mockClient.trackerId = 1;
+      const alarm = { Alarm_ID: 1, tracker: { Tracker_ID: 1 }, Timestamp: new Date() };
+
+      mockAlarmService.triggerAlarm.mockResolvedValue(alarm);
+
+      // Mock a dashboard client and a non-dashboard client
+      const dashboardClient = {
+        send: jest.fn(),
+        readyState: WebSocket.OPEN,
+        clientType: 'dashboard',
+      };
+      const otherClient = {
+        send: jest.fn(),
+        readyState: WebSocket.OPEN,
+        clientType: 'pi',
+      };
+
+      gateway.server = {
+        clients: [dashboardClient, otherClient],
+      } as any;
+
+      await gateway.handleAlarm(mockClient as any);
+
+      expect(mockAlarmService.triggerAlarm).toHaveBeenCalledWith(1);
+      expect(dashboardClient.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          event: 'alarm',
+          data: 
+          {
+            Alarm_ID: alarm.Alarm_ID,
+            Tracker_ID: 1,
+            Timestamp: alarm.Timestamp,
+          },
+        }),
+      );
+      expect(otherClient.send).not.toHaveBeenCalled();
+    });
+
+    it('should send error if client is not identified', async () => {
+      mockClient.trackerId = null;
+
+      await gateway.handleAlarm(mockClient as any);
+
+      expect(mockAlarmService.triggerAlarm).not.toHaveBeenCalled();
+      expect(mockClient.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          event: 'error',
+          data: 'Not identified, please identify or register first',
+        }),
+      );
+    });
+
+    it('should not send to clients that are not open', async () => {
+      mockClient.trackerId = 1;
+      const alarm = { Alarm_ID: 1, tracker: { Tracker_ID: 1 }, Timestamp: new Date() };
+
+      mockAlarmService.triggerAlarm.mockResolvedValue(alarm);
+
+      const closedClient = {
+        send: jest.fn(),
+        readyState: WebSocket.CLOSED,
+        clientType: 'dashboard',
+      };
+
+      gateway.server = {
+        clients: [closedClient],
+      } as any;
+
+      await gateway.handleAlarm(mockClient as any);
+
+      expect(closedClient.send).not.toHaveBeenCalled();
     });
   });
 });
