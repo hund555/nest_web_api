@@ -11,6 +11,7 @@ import { Server, WebSocket } from 'ws';
 import { GpsService } from '../gps/gps.service';
 import { TrackersService } from '../trackers/trackers.service';
 import { GpsLocationDto } from '../dto/gps.dto';
+import { AlarmService } from '../alarm/alarm.service';
 
 @WebSocketGateway(5000)
 export class WebsocketGateway
@@ -22,6 +23,7 @@ export class WebsocketGateway
     private readonly logger: Logger,
     private readonly gpsService: GpsService,
     private readonly trackersService: TrackersService,
+    private readonly alarmService: AlarmService,
   ) {}
 
   afterInit() 
@@ -35,8 +37,18 @@ export class WebsocketGateway
     client.send(JSON.stringify({ event: 'connected', data: 'Welcome!' }));
   }
 
+  /**
+   * Handles client disconnection events. If a tracker client disconnects, it updates the tracker's online status in the database. Dashboard client disconnections are simply logged.
+   * @param client 
+   * @returns 
+   */
   async handleDisconnect(client: WebSocket) 
   {
+    if ((client as any).clientType === 'dashboard')
+    {
+      this.logger.log('Dashboard client disconnected');
+      return;
+    }
     const trackerId = this.getTrackerIdFromClient(client);
     if (trackerId) 
     {
@@ -66,10 +78,36 @@ export class WebsocketGateway
     this.logger.log(`New tracker registered with ID ${tracker.Tracker_ID}`);
   }
 
-  // Pi has id.txt — just mark as online
+  /**
+   * Handles client identification messages. This allows clients to identify themselves as either a tracker (Pi) or a dashboard, and associates tracker clients with their database ID for future interactions.
+   * @param client 
+   * @param payload 
+   * @returns 
+   */
   @SubscribeMessage('identify')
-  async handleIdentify(client: WebSocket, payload: { Tracker_ID: number }) 
+  async handleIdentify(client: WebSocket, payload: { Tracker_ID?: number; clientType?: 'pi' | 'dashboard' }) 
   {
+    // Dashboard client identification
+    if (payload.clientType === 'dashboard')
+    {
+      (client as any).clientType = 'dashboard';
+      client.send(JSON.stringify({
+        event: 'identified',
+        data: { clientType: 'dashboard' },
+      }));
+      this.logger.log('Dashboard client identified');
+      return;
+    }
+
+    if (!payload.Tracker_ID)
+    {
+      client.send(JSON.stringify({
+        event: 'error',
+        data: 'Tracker_ID is required for pi clients',
+      }));
+      return;
+    }
+    
     const tracker = await this.trackersService.findOne(payload.Tracker_ID);
 
     if (!tracker) 
@@ -84,16 +122,22 @@ export class WebsocketGateway
 
     await this.trackersService.setOnlineStatus(payload.Tracker_ID, true);
     (client as any).trackerId = payload.Tracker_ID;
+    (client as any).clientType = 'pi';
 
     client.send(JSON.stringify({
       event: 'identified',
-      data: { Tracker_ID: payload.Tracker_ID },
+      data: { Tracker_ID: payload.Tracker_ID, clientType: 'pi' },
     }));
 
     this.logger.log(`Tracker ${payload.Tracker_ID} identified and online`);
   }
 
-  // Pi sends GPS location
+  /**
+   * Handles incoming GPS location messages from connected clients.
+   * @param client 
+   * @param payload 
+   * @returns 
+   */
   @SubscribeMessage('gps')
   async handleGps(client: WebSocket, payload: GpsLocationDto) 
   {
@@ -137,5 +181,44 @@ export class WebsocketGateway
   private getTrackerIdFromClient(client: WebSocket): number | null 
   {
     return (client as any).trackerId ?? null;
+  }
+
+  /**
+   * Handles incoming alarm messages from connected clients.
+   * @param client 
+   * @returns 
+   */
+  @SubscribeMessage('alarm')
+  async handleAlarm(client: WebSocket) 
+  {
+    const trackerId = this.getTrackerIdFromClient(client);
+    if (!trackerId) 
+    {
+      client.send(JSON.stringify({
+        event: 'error',
+        data: 'Not identified, please identify or register first',
+      }));
+      return;
+    }
+
+    const alarm = await this.alarmService.triggerAlarm(trackerId);
+
+    // Broadcast alarm to all connected dashboard clients
+    this.server.clients.forEach(c => {
+      if (c.readyState === WebSocket.OPEN && (c as any).clientType === 'dashboard') 
+      {
+        c.send(JSON.stringify({
+          event: 'alarm',
+          data: 
+          {
+            Alarm_ID: alarm.Alarm_ID,
+            Tracker_ID: trackerId,
+            Timestamp: alarm.Timestamp,
+          },
+        }));
+      }
+    });
+
+    this.logger.log(`Alarm triggered by tracker ${trackerId}`);
   }
 }

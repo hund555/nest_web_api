@@ -1,23 +1,16 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
-import { Resident } from './resident.entity';
-import { User } from './user.entity';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Tracker } from './tracker.entity';
 
-@Entity('Alarm_logs')
-export class AlarmLog {
+@Entity('Alarms')
+export class Alarm 
+{
   @PrimaryGeneratedColumn()
-  ID: number;
+  Alarm_ID: number;
 
-  @ManyToOne(() => Resident, resident => resident.alarmLogs)
-  @JoinColumn({ name: 'Resident_ID' })
-  resident: Resident;
+  @ManyToOne(() => Tracker)
+  @JoinColumn({ name: 'Tracker_ID' })
+  tracker: Tracker;
 
   @CreateDateColumn()
   Timestamp: Date;
-
-  @Column({ nullable: true })
-  Description: string;
-
-  @ManyToOne(() => User, user => user.alarmLogs)
-  @JoinColumn({ name: 'User_ID' })
-  respondedBy: User;
 }

@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToOne, OneToMany, JoinColumn } from 'typeorm';
 import { Tracker } from './tracker.entity';
-import { AlarmLog } from './alarm.entity';
+import { IncidentReport } from './incident.entity';
 
 @Entity('Residents')
 export class Resident {
@@ -23,6 +23,6 @@ export class Resident {
   @JoinColumn({ name: 'Tracker_ID' })
   tracker: Tracker;
 
-  @OneToMany(() => AlarmLog, alarm => alarm.resident)
-  alarmLogs: AlarmLog[];
+  @OneToMany(() => IncidentReport, incident => incident.resident)
+  incidentReports: IncidentReport[];
 }

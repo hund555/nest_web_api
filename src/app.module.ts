@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { WebsocketGateway } from './websocket/websocket.gateway';
 import { GpsModule } from './gps/gps.module';
-import { AlarmModule } from './alarm/alarm.module';
 import { TrackersModule } from './trackers/trackers.module';
 import { ResidentsModule } from './residents/residents.module';
 import { UsersModule } from './users/users.module';
@@ -12,10 +11,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Tracker } from './entities/tracker.entity';
 import { GpsLocation } from './entities/gps.entity';
 import { Resident } from './entities/resident.entity';
-import { AlarmLog } from './entities/alarm.entity';
+import { Alarm } from './entities/alarm.entity';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { WebsocketModule } from './websocket/websocket.module';
+import { IncidentReport } from './entities/incident.entity';
+import { AlarmModule } from './alarm/alarm.module';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { WebsocketModule } from './websocket/websocket.module';
         username: config.get<string>('DB_USERNAME'),
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_DATABASE'),
-        entities: [Tracker, GpsLocation, Resident, AlarmLog, User, Role],
+        entities: [Tracker, GpsLocation, Resident, Alarm, User, Role, IncidentReport],
         synchronize: true,
         options: {
           encrypt: true,
@@ -39,11 +40,10 @@ import { WebsocketModule } from './websocket/websocket.module';
       inject: [ConfigService],
     }),
     GpsModule, 
-    AlarmModule, 
     TrackersModule, 
     ResidentsModule, 
     UsersModule, 
-    WebsocketModule, ],
+    WebsocketModule, AlarmModule, ],
   controllers: [AppController],
   providers: [AppService],
 })
